@@ -11,7 +11,7 @@ function interactScreen() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://10.136.88.208:5000/api/route", {
+      const response = await fetch("http://10.136.88.208:5000/api/gpt", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
