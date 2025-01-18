@@ -11,7 +11,7 @@ function interactScreen() {
   const fetchData = async () => {
     setLoading(true);
     try {
-      const response = await fetch("http://10.136.88.208:5000/api/gpt", {
+      const response = await fetch("http://192.168.1.6:5000/api/gpt", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -96,7 +96,7 @@ const styles = StyleSheet.create({
         width: "100%"
     },
     scrollViewText: {
-        fontSize: height * 0.02
+        fontSize: height * 0.014
     },
     disabledButton: {
         backgroundColor: "gray"  

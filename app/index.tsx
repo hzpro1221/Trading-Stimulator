@@ -3,6 +3,8 @@ import React, { useState } from 'react';
 import { View, Text, TouchableOpacity, StyleSheet, Dimensions, Alert } from 'react-native';
 
 import * as DocumentPicker from 'expo-document-picker';
+import { useDispatch } from 'react-redux';
+import { setDataPoint, setTradingDecisions } from '@/redux/reducer/dataSlice';
 
 const { width, height } = Dimensions.get('window');
 
@@ -11,7 +13,7 @@ const uploadData = async () => {
     const result = await DocumentPicker.getDocumentAsync({
       type: '*/*',
     });
-    
+
     if (result.assets != null) {
       const { uri, name, mimeType } = result['assets'][0];
 
@@ -23,7 +25,7 @@ const uploadData = async () => {
       });
 
       try {
-        const response = await fetch("http://10.136.133.179:5000/api/uploadData", {
+        const response = await fetch("http://192.168.1.6:5000/api/uploadData", {
           method: "POST",
           headers: {
             "Content-Type": "multipart/form-data",
@@ -64,7 +66,7 @@ const uploadCode = async () => {
       });
 
       try {
-        const response = await fetch("10.136.133.179:5000/api/uploadCode", {
+        const response = await fetch("http://192.168.1.6:5000/api/uploadCode", {
           method: "POST",
           headers: {
             "Content-Type": "multipart/form-data",
@@ -89,34 +91,40 @@ const uploadCode = async () => {
 
 const evaluate = async () => {
     try {
-      const response = await fetch("http://10.136.133.179:5000/api/evaluate", {
+      const response = await fetch("http://192.168.1.6:5000/api/evaluate", {
         method: "GET",
         headers: {
           "Content-Type": "application/json",
         },
       });
-
-      const responseText = await response.text(); 
+      
+      const responseData = await response.json();
       if (response.ok) {
-        Alert.alert('CSV Loaded', "Data process Successfully");
+        Alert.alert('Evaluate', "Evaluate Successfully");
+        return {
+          dataPoint: responseData.dataPoint,
+          tradingDecisions: responseData.tradingDecisions,
+        };
       } else {
-        Alert.alert('Error', `Failed to load data: ${responseText.data}`);
+        Alert.alert('Error', `Failed to evaluate`);
+        return null
       }
-
     } catch (err) {
       Alert.alert('Error', `Error fetching API: ${err}`);
+      return null
     } 
 };
 
 const Menu = () => {
   const route = useRouter();
-  
+  const dispatch = useDispatch();
+
   return (
     <View style={stylesMenu.scene}>
       <Text style={stylesMenu.title}>TRADING STIMULATOR</Text>
     <TouchableOpacity
         style={stylesMenu.importButton}
-        onPress={() => { console.log("Load your code...") }}
+        onPress={async () => {await uploadCode()}}
     >
         <Text style={stylesMenu.buttonText}>Load your code...</Text>
     </TouchableOpacity>
@@ -127,16 +135,16 @@ const Menu = () => {
         <Text style={stylesMenu.buttonText}>Load your data...</Text>
     </TouchableOpacity>
     <TouchableOpacity
-        style={stylesMenu.importButton}
-        onPress={async () => {await uploadCode()}}
-    >
-        <Text style={stylesMenu.buttonText}>Trading with chatGPT</Text>
-    </TouchableOpacity>
-    <TouchableOpacity
     style={stylesMenu.startButton}
     onPress={async () => { 
-      await evaluate()
-      route.push('/homeScreen') }}
+      const response = await evaluate()
+      
+      if (response != null) {
+        dispatch(setDataPoint(response.dataPoint));
+        dispatch(setTradingDecisions(response.tradingDecisions))
+        route.push('/homeScreen'); 
+        }
+      }}
     >
     <Text style={stylesMenu.startButtonText}>Start evaluate!</Text>
     </TouchableOpacity>

@@ -1,36 +1,53 @@
 import { RootState } from '@/redux/store';
 import { useRouter } from 'expo-router';
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Image, StyleSheet, Platform, View, Text, TouchableOpacity, Dimensions, ScrollView } from 'react-native';
 import { LineChart } from "react-native-gifted-charts";
 
 import { useSelector } from 'react-redux';
 
-const { width, height } = Dimensions.get('window');
-
-const tradingData = [
-  { id: 1, name: 'Apple', price: '$1', buy: 100, sale: 110, profitLoss: '+$10' },
-  { id: 2, name: 'Banana', price: '$0.5', buy: 150, sale: 140, profitLoss: '-$5' },
-  { id: 3, name: 'Cherry', price: '$2', buy: 80, sale: 90, profitLoss: '+$10' },
-  { id: 4, name: 'Grapes', price: '$1.8', buy: 60, sale: 55, profitLoss: '-$3' },
-  { id: 5, name: 'Orange', price: '$1.2', buy: 120, sale: 140, profitLoss: '+$24' },
-  { id: 6, name: 'Pineapple', price: '$3', buy: 40, sale: 35, profitLoss: '-$5' },
-  { id: 7, name: 'Mango', price: '$2.5', buy: 70, sale: 80, profitLoss: '+$17.5' },
-  { id: 8, name: 'Strawberry', price: '$2.3', buy: 90, sale: 100, profitLoss: '+$17' },
-  { id: 9, name: 'Watermelon', price: '$4', buy: 50, sale: 60, profitLoss: '+$20' },
-  { id: 10, name: 'Blueberry', price: '$3.5', buy: 40, sale: 35, profitLoss: '-$10' },
-  { id: 11, name: 'Peach', price: '$2.8', buy: 65, sale: 70, profitLoss: '+$13' },
-  { id: 12, name: 'Lemon', price: '$1.1', buy: 130, sale: 125, profitLoss: '-$5' },
-  { id: 13, name: 'Pear', price: '$2.2', buy: 55, sale: 60, profitLoss: '+$11' },
-  { id: 14, name: 'Plum', price: '$2', buy: 85, sale: 90, profitLoss: '+$15' },
-  { id: 15, name: 'Apricot', price: '$3', buy: 45, sale: 50, profitLoss: '+$15' }
-];
+const { width } = Dimensions.get('window');
 
 export default function HomeScreen() {
   const route = useRouter();
-  const data = useSelector((state: RootState) => state.dataSlice.data);
-  console.log(data);
+  const data = useSelector((state: RootState) => state.dataSlice.dataPoint);
   
+  const purchasePrice = data.map(item => 
+    (parseFloat(item[1]) + parseFloat(item[2]) + parseFloat(item[3]) + parseFloat(item[4])) / 4
+  );
+
+  const tradingDecision = useSelector((state: RootState) => state.dataSlice.tradingDecisions);
+  
+  let i = false
+  let totalBuy = 0
+  let buyVolume = 0
+  let history = []
+  let totalRevenue = 0
+  for (const item of tradingDecision) {
+    if (item.purchaseType == "buy") {
+      i = true
+      let hold = 1
+      while (purchasePrice[item.purchasePoint] * hold < 100) {
+        hold *= 10
+      }
+      totalBuy += purchasePrice[item.purchasePoint] * hold
+      buyVolume += hold
+    } else if ((item.purchaseType == "sale") && (i == true)) {
+      
+      let salePrice = purchasePrice[item.purchasePoint] * buyVolume
+      history.push({
+        buy: parseFloat(totalBuy.toFixed(2)),
+        sale: parseFloat(salePrice.toFixed(2)),
+        profit: parseFloat((salePrice - totalBuy).toFixed(2))
+      });
+      totalRevenue += (salePrice - totalBuy)
+      i = false
+      buyVolume = 0
+      totalBuy = 0
+    }
+  }
+  totalRevenue = parseFloat((totalRevenue).toFixed(2))
+
   const prices = useMemo(() => {
     const openPrice: { value: any; dataPointText: string; }[] = [];
     const highPrice: { value: any; dataPointText: string; }[] = [];
@@ -124,18 +141,18 @@ export default function HomeScreen() {
                     <View style={styles.rowHeader}>
                       <Text style={styles.headerCell}>Buy</Text>
                       <Text style={styles.headerCell}>Sale</Text>
-                      <Text style={styles.headerCell}>Profit/Perte</Text>
+                      <Text style={styles.headerCell}>Profit</Text>
                     </View>
-                    {tradingData.map((item) => (
-                      <View key={item.id} style={styles.row}>
-                        <Text style={styles.cell}>{item.buy}</Text>
-                        <Text style={styles.cell}>{item.sale}</Text>
-                        <Text style={styles.cell}>{item.profitLoss}</Text>
+                    {history.map((item, index) => (
+                      <View key={index} style={item.profit > 0 ? styles.rowPositive : styles.rowNegative} >
+                        <Text style={styles.cell}>{`${item.buy}$`}</Text>
+                        <Text style={styles.cell}>{`${item.sale}$`}</Text>
+                        <Text style={styles.cell}>{`${item.profit}$`}</Text>
                       </View>
                     ))}
                   </View>
                 </ScrollView>
-                <Text style={styles.totalRevenue}>Total Revenue: 20</Text>
+                <Text style={styles.totalRevenue}>{`Total Revenue: ${totalRevenue}$`}</Text>
             </View>
       </View>
 
@@ -203,12 +220,20 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  row: {
+  rowPositive: {
     flexDirection: 'row',
     padding: 10,
     borderBottomWidth: 1,
     borderBottomColor: '#ccc',
+    backgroundColor: "#67d66f"
   },
+  rowNegative: {
+    flexDirection: 'row',
+    padding: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ccc',
+    backgroundColor: "#f26a6a"
+  },  
   cell: {
     flex: 1,
     textAlign: 'center',

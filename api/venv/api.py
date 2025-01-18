@@ -31,6 +31,21 @@ async def gpt4FreeApiCallFunction(requests):
         tasks.append(process_api_request(request, index))
     return await asyncio.gather(*tasks, return_exceptions=True)
 
+def promptingData(request):
+    codePath = os.path.join('inputFile/', "code.py")
+    with open(codePath, 'r') as file:
+        content = file.read()
+    prompt = f"""
+You are a assistent. Your job is to helping people improve their trading agorithm. Here is the user's trading agorithm
+{content}
+
+Here is user request:
+{request}
+
+If user asking question not relevant to trading problem, answer: "Please asking question relevant to your code".
+"""
+    return [prompt]
+    
 
 @app.route('/api/gpt', methods=['POST'])
 def generate():
@@ -38,9 +53,9 @@ def generate():
     if not data or 'request' not in data:
         return jsonify({"error": "Missing 'request' in request"}), 400
 
-    response = asyncio.run(gpt4FreeApiCallFunction([data['request']]))
+    response = asyncio.run(gpt4FreeApiCallFunction(promptingData(data['request'])))
     while ("Unusual activity" in str(response[0])) or ("Request ended with status code 404" in str(response[0])):
-        response = asyncio.run(gpt4FreeApiCallFunction([data['request']]))
+        response = asyncio.run(gpt4FreeApiCallFunction(promptingData(data['request'])))
     
     return jsonify({"message": response})
 
@@ -73,17 +88,15 @@ def evaluate():
     dataPath = os.path.join('inputFile/', "data.csv")
     codePath = os.path.join('inputFile/', "code.py")
 
-    dataChunk = 2
+    dataChunk = 10
     with open(dataPath, 'r', newline='', encoding='utf-8') as csvfile:
-        dataList = list(csv.reader(csvfile))
-    
+        dataPoint = list(csv.reader(csvfile))
+
     from inputFile.code import tradingAgorithm
 
-    dataLen = len(dataList)
+    dataLen = len(dataPoint)
+    actions = []
     for i in range(dataLen - dataChunk):
         endIndex = (i + 1) * dataChunk
-        tradingAgorithm(dataList[i:(i + dataChunk)], i, dataChunk)
-    return {'data': 'file upload sucess'}
-
-
-    
+        actions += tradingAgorithm(dataPoint[i:(i + dataChunk)], i, dataChunk)
+    return jsonify({'dataPoint': dataPoint, 'tradingDecisions': actions})

@@ -1,5 +1,5 @@
 import { configureStore } from '@reduxjs/toolkit';
-import dataSlice from './dataSlice';
+import dataSlice from './reducer/dataSlice';
 
 export const store = configureStore({
   reducer: {
@@ -7,5 +7,5 @@ export const store = configureStore({
   },
 });
 
-export type RootState = ReturnType<typeof store.getState>;  // Type cho state
+export type RootState = ReturnType<typeof store.getState>;  
 export type AppDispatch = typeof store.dispatch;  
